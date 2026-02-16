@@ -57,18 +57,18 @@ const Navbar = () => {
                                 {userName ? `Welcome, ${userName}!` : "Signed In!"}
                             </span>
 
-                            <Button size="sm" className="btn" onClick={handleAuthClick}>
+                            <Button size="sm" className="btn cursor-pointer" onClick={handleAuthClick}>
                                 Log Out
                             </Button>
                         </>
                     ) : (
                         <>
 
-                            <button onClick={handleAuthClick} className="login">
+                            <button onClick={handleAuthClick} className="login cursor-pointer">
                                 Log In
                             </button>
 
-                            <a href="#upload" className="cta"> Get Started </a>
+                            <a href="#upload" className="cta cursor-pointer"> Get Started </a>
                         </>
                     )}
 

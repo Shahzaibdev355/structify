@@ -1,11 +1,12 @@
 import { CheckCircle, ImageIcon, UploadIcon } from "lucide-react";
 import { useState, useRef } from "react";
 import { useOutletContext } from "react-router";
+import toast, { Toaster } from "react-hot-toast";
 
 import {
-    PROGRESS_INCREMENT,
-    PROGRESS_INTERVAL_MS,
-    REDIRECT_DELAY_MS,
+  PROGRESS_INCREMENT,
+  PROGRESS_INTERVAL_MS,
+  REDIRECT_DELAY_MS,
 } from "../lib/constant";
 
 // interface AuthContext {
@@ -17,165 +18,174 @@ import {
 // }
 
 const Upload = ({ onComplete }: UploadProps) => {
-    const [file, setFile] = useState<File | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
-    const [progress, setProgress] = useState(0);
+  const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-    const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
 
-    const { isSignedIn } = useOutletContext<AuthContext>();
+  const { isSignedIn } = useOutletContext<AuthContext>();
 
-    /* ----------------------------- FILE PROCESS ----------------------------- */
+  /* ----------------------------- FILE PROCESS ----------------------------- */
 
-    const processFile = (selectedFile: File) => {
-        if (!isSignedIn) return;
+  const processFile = (selectedFile: File) => {
+    if (!isSignedIn) return;
 
-        const reader = new FileReader();
-        reader.onerror = () => {
-            console.error("Error reading file:", reader.error);
-            setFile(null);
-            setProgress(0);
+    const reader = new FileReader();
+    reader.onerror = () => {
+      console.error("Error reading file:", reader.error);
+      setFile(null);
+      setProgress(0);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+
+    reader.onload = () => {
+      const base64 = reader.result as string;
+
+      setProgress(0);
+
+      intervalRef.current = window.setInterval(() => {
+        setProgress((prev) => {
+          const next = prev + PROGRESS_INCREMENT;
+
+          if (next >= 100) {
             if (intervalRef.current) {
-                clearInterval(intervalRef.current);
+              clearInterval(intervalRef.current);
             }
-        }
 
-        reader.onload = () => {
-            const base64 = reader.result as string;
+            setTimeout(() => {
+              onComplete?.(base64);
+            }, REDIRECT_DELAY_MS);
 
-            setProgress(0);
+            return 100;
+          }
 
-            intervalRef.current = window.setInterval(() => {
-                setProgress((prev) => {
-                    const next = prev + PROGRESS_INCREMENT;
-
-                    if (next >= 100) {
-                        if (intervalRef.current) {
-                            clearInterval(intervalRef.current);
-                        }
-
-                        setTimeout(() => {
-                            onComplete?.(base64);
-                        }, REDIRECT_DELAY_MS);
-
-                        return 100;
-                    }
-
-                    return next;
-                });
-            }, PROGRESS_INTERVAL_MS);
-        };
-
-        reader.readAsDataURL(selectedFile);
+          return next;
+        });
+      }, PROGRESS_INTERVAL_MS);
     };
 
-    /* ----------------------------- HANDLERS ----------------------------- */
+    reader.readAsDataURL(selectedFile);
+  };
 
-    const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg"];
+  /* ----------------------------- HANDLERS ----------------------------- */
 
-    const isValidFileType = (file: File) => {
-        return ALLOWED_TYPES.includes(file.type);
-    };
+  const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg"];
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!isSignedIn) return;
+  const isValidFileType = (file: File) => {
+    return ALLOWED_TYPES.includes(file.type);
+  };
 
-        const selectedFile = e.target.files?.[0];
-        if (!selectedFile) return;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // if (!isSignedIn) return;
 
-        if (!isValidFileType(selectedFile)) {
-            alert("Only PNG, JPG and JPEG files are allowed.");
-            return;
-        }
+    if (!isSignedIn) {
+      console.log("not logged in");
 
-        setFile(selectedFile);
-        processFile(selectedFile);
-    };
+      toast.error("Please login to upload files");
+      return;
+    }
 
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        if (!isSignedIn) return;
-        setIsDragging(true);
-    };
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
 
-    const handleDragLeave = () => {
-        setIsDragging(false);
-    };
+    if (!isValidFileType(selectedFile)) {
+      alert("Only PNG, JPG and JPEG files are allowed.");
+      return;
+    }
 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        if (!isSignedIn) return;
+    setFile(selectedFile);
+    processFile(selectedFile);
+  };
 
-        setIsDragging(false);
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!isSignedIn) return;
+    setIsDragging(true);
+  };
 
-        const droppedFile = e.dataTransfer.files?.[0];
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
 
-        if (!droppedFile) return;
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    // if (!isSignedIn) return;
 
-        setFile(droppedFile);
-        processFile(droppedFile);
-    };
+    if (!isSignedIn) {
+      toast.error("Please login to upload files");
+      return;
+    }
 
-    /* ----------------------------- UI ----------------------------- */
+    setIsDragging(false);
 
-    return (
-        <div className="upload">
-            {!file ? (
-                <div
-                    className={`dropzone ${isDragging ? "is-dragging" : ""}`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                >
-                    <input
-                        type="file"
-                        className="drop-input"
-                        accept=".jpg,.jpeg,.png,.webp"
-                        disabled={!isSignedIn}
-                        onChange={handleChange}
-                    />
+    const droppedFile = e.dataTransfer.files?.[0];
 
-                    <div className="drop-content">
-                        <div className="drop-icon">
-                            <UploadIcon size={20} />
-                        </div>
+    if (!droppedFile) return;
 
-                        <p>
-                            {isSignedIn
-                                ? "Click to upload or drag and drop"
-                                : "Sign in to upload your floor plan."}
-                        </p>
+    setFile(droppedFile);
+    processFile(droppedFile);
+  };
 
-                        <p className="help">Maximum file size 50 MB</p>
-                    </div>
-                </div>
-            ) : (
-                <div className="upload-status">
-                    <div className="status-content">
-                        <div className="status-icon">
-                            {progress === 100 ? (
-                                <CheckCircle className="check" />
-                            ) : (
-                                <ImageIcon className="image" />
-                            )}
-                        </div>
+  /* ----------------------------- UI ----------------------------- */
 
-                        <h3>{file.name}</h3>
+  return (
+    <div className="upload">
+      {!file ? (
+        <div
+          className={`dropzone ${isDragging ? "is-dragging" : ""}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            className="drop-input"
+            accept=".jpg,.jpeg,.png,.webp"
+            onChange={handleChange}
+          />
 
-                        <div className="progress">
-                            <div className="bar" style={{ width: `${progress}%` }} />
+          <div className="drop-content">
+            <div className="drop-icon">
+              <UploadIcon size={20} />
+            </div>
 
-                            <p className="status-text">
-                                {progress < 100
-                                    ? "Analyzing Floor Plan..."
-                                    : "Redirecting..."}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <p>
+              {isSignedIn
+                ? "Click to upload or drag and drop"
+                : "Sign in to upload your floor plan."}
+            </p>
+
+            <p className="help">Maximum file size 50 MB</p>
+          </div>
         </div>
-    );
+      ) : (
+        <div className="upload-status">
+          <div className="status-content">
+            <div className="status-icon">
+              {progress === 100 ? (
+                <CheckCircle className="check" />
+              ) : (
+                <ImageIcon className="image" />
+              )}
+            </div>
+
+            <h3>{file.name}</h3>
+
+            <div className="progress">
+              <div className="bar" style={{ width: `${progress}%` }} />
+
+              <p className="status-text">
+                {progress < 100 ? "Analyzing Floor Plan..." : "Redirecting..."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Upload;

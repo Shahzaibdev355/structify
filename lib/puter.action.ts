@@ -169,3 +169,43 @@ export const getProjectById = async ({ id }: { id: string }) => {
         return null;
     }
 };
+
+export const updateProjectVisibility = async ({ 
+    id, 
+    visibility 
+}: { 
+    id: string; 
+    visibility: 'private' | 'public' 
+}): Promise<DesignItem | null> => {
+    if (!PUTER_WORKER_URL) {
+        console.warn("Missing VITE_PUTER_WORKER_URL; skipping project update.");
+        return null;
+    }
+
+    try {
+        const response = await puter.workers.exec(
+            `${PUTER_WORKER_URL}/api/projects/update-visibility`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id,
+                    visibility,
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            console.error('Failed to update project visibility:', await response.text());
+            return null;
+        }
+
+        const data = (await response.json()) as { project?: DesignItem | null };
+        return data?.project ?? null;
+    } catch (error) {
+        console.error("Error updating project visibility:", error);
+        return null;
+    }
+};

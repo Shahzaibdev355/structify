@@ -1,7 +1,8 @@
 import Button from "components/ui/Button";
+import Modal from "components/ui/Modal";
 import { generate3DView } from "lib/ai.action";
-import { createProject, getProjectById } from "lib/puter.action";
-import { Box, Download, RefreshCcw, Share2, X } from "lucide-react";
+import { createProject, getProjectById, updateProjectVisibility } from "lib/puter.action";
+import { Box, Download, RefreshCcw, Share2, X, Copy, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router";
@@ -23,10 +24,13 @@ const VisualizerId = () => {
     const [project, setProject] = useState<DesignItem | null>(null);
     const [isProjectLoading, setIsProjectLoading] = useState(true);
 
-    const [isProcessingLoading, setIsProcessingLoading] = useState(true);
-
     const [isProcessing, setIsProcessing] = useState(false);
     const [currentImage, setCurrentImage] = useState<string | null>(null);
+
+    // Share functionality state
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [shareStatus, setShareStatus] = useState<'idle' | 'sharing' | 'unsharing' | 'copied'>('idle');
+    const [shareUrl, setShareUrl] = useState<string>('');
 
     const handleBack = () => navigate("/");
 
@@ -132,6 +136,75 @@ const VisualizerId = () => {
             console.error("Failed to export image:", error);
         }
     };
+
+    const handleShare = async () => {
+        if (!project || !id) return;
+
+        if (project.isPublic) {
+            // If already public, show the share modal with existing URL
+            setShareUrl(`${window.location.origin}/visualizer/${id}`);
+            setIsShareModalOpen(true);
+        } else {
+            // Make project public
+            setShareStatus('sharing');
+            try {
+                const updatedProject = await updateProjectVisibility({ 
+                    id, 
+                    visibility: 'public' 
+                });
+                
+                if (updatedProject) {
+                    setProject(updatedProject);
+                    setShareUrl(`${window.location.origin}/visualizer/${id}`);
+                    setIsShareModalOpen(true);
+                    setShareStatus('idle');
+                } else {
+                    console.error('Failed to make project public');
+                    setShareStatus('idle');
+                }
+            } catch (error) {
+                console.error('Error sharing project:', error);
+                setShareStatus('idle');
+            }
+        }
+    };
+
+    const handleUnshare = async () => {
+        if (!project || !id) return;
+
+        setShareStatus('unsharing');
+        try {
+            const updatedProject = await updateProjectVisibility({ 
+                id, 
+                visibility: 'private' 
+            });
+            
+            if (updatedProject) {
+                setProject(updatedProject);
+                setIsShareModalOpen(false);
+                setShareUrl('');
+                setShareStatus('idle');
+            } else {
+                console.error('Failed to make project private');
+                setShareStatus('idle');
+            }
+        } catch (error) {
+            console.error('Error unsharing project:', error);
+            setShareStatus('idle');
+        }
+    };
+
+    const handleCopyLink = async () => {
+        if (!shareUrl) return;
+
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            setShareStatus('copied');
+            setTimeout(() => setShareStatus('idle'), 2000);
+        } catch (error) {
+            console.error('Failed to copy link:', error);
+        }
+    };
     
 
     return (
@@ -173,9 +246,15 @@ const VisualizerId = () => {
                                 Export
                             </Button>
 
-                            <Button size="sm" onClick={() => { }} className="share cursor-pointer">
+                            <Button 
+                                size="sm" 
+                                onClick={handleShare} 
+                                className="share cursor-not-allowed"
+                                // disabled={shareStatus === 'sharing' || shareStatus === 'unsharing'}
+                                disabled={true}
+                            >
                                 <Share2 className="w-4 h-4 mr-2" />
-                                Share
+                                {shareStatus === 'sharing' ? 'Sharing...' : 'Share'}
                             </Button>
                         </div>
                     </div>
@@ -265,6 +344,59 @@ const VisualizerId = () => {
                     <img src={initialImage} alt="source" />
                 </div>
             )} */}
+
+            {/* Share Modal */}
+            <Modal
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
+                title="Share Project"
+                className="share-modal"
+            >
+                <div className="share-content">
+                    <p className="share-description">
+                        Anyone with this link can view your project
+                    </p>
+                    
+                    <div className="share-url-container">
+                        <input
+                            type="text"
+                            value={shareUrl}
+                            readOnly
+                            className="share-url-input"
+                        />
+                        <Button
+                            size="sm"
+                            onClick={handleCopyLink}
+                            className="copy-button"
+                            disabled={shareStatus === 'copied'}
+                        >
+                            {shareStatus === 'copied' ? (
+                                <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Copied!
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="w-4 h-4 mr-2" />
+                                    Copy
+                                </>
+                            )}
+                        </Button>
+                    </div>
+
+                    <div className="share-actions">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleUnshare}
+                            disabled={shareStatus === 'unsharing'}
+                            className="unshare-button"
+                        >
+                            {shareStatus === 'unsharing' ? 'Unsharing...' : 'Unshare'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

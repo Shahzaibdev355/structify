@@ -16,6 +16,8 @@ import {
   signOut as puterSignOut
 } from "lib/puter.action";
 
+import { Toaster } from "react-hot-toast";
+
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
@@ -91,6 +93,7 @@ export default function App() {
 
   return (
     <main className="min-h-screen bg-background text-foreground relative z-10">
+      <Toaster position="top-right" />
       <Outlet 
       context={{
         ...authState,
