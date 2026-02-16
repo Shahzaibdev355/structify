@@ -3,6 +3,7 @@ import { generate3DView } from "lib/ai.action";
 import { createProject, getProjectById } from "lib/puter.action";
 import { Box, Download, RefreshCcw, Share2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
 const VisualizerId = () => {
@@ -112,6 +113,27 @@ const VisualizerId = () => {
         void runGeneration(project);
     }, [project, isProjectLoading]);
 
+
+    const handleExport = () => {
+        if (!currentImage) return;
+    
+        try {
+            const link = document.createElement("a");
+            link.href = currentImage;
+    
+            // Try to generate a clean filename
+            const fileName = `${project?.name || `roomify-${id}`}.png`;
+    
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error("Failed to export image:", error);
+        }
+    };
+    
+
     return (
         <div className="visualizer">
             <nav className="topbar">
@@ -125,7 +147,7 @@ const VisualizerId = () => {
                     variant="primary"
                     size="sm"
                     onClick={handleBack}
-                    className="exit"
+                    className="exit cursor-pointer"
                 >
                     <X className="icon" /> Exit Editor
                 </Button>
@@ -143,15 +165,15 @@ const VisualizerId = () => {
                         <div className="panel-actions">
                             <Button
                                 size="sm"
-                                onClick={() => { }}
-                                className="export"
+                                onClick={handleExport}
+                                 className="export cursor-pointer"
                                 disabled={!currentImage}
                             >
                                 <Download className="w-4 h-4 mr-2" />
                                 Export
                             </Button>
 
-                            <Button size="sm" onClick={() => { }} className="share">
+                            <Button size="sm" onClick={() => { }} className="share cursor-pointer">
                                 <Share2 className="w-4 h-4 mr-2" />
                                 Share
                             </Button>
@@ -190,6 +212,51 @@ const VisualizerId = () => {
                         )}
                     </div>
                 </div>
+
+
+                        <div className="panel compare">
+
+                            <div className="panel-header">
+
+                                <div className="panel-meta">
+                                    <p>Comparison</p>
+                                    <h3>Before and After</h3>
+                                    <div className="hint">Drag to Compare</div>
+                                </div>
+
+                            </div>
+
+                            <div className="compare-stage">
+                                {project?.sourceImage && currentImage ?(
+                                    <ReactCompareSlider
+                                    defaultValue={50}
+                                    style={{width: '100%', height: 'auto'}}
+                                    itemOne= {
+                                        <ReactCompareSliderImage 
+                                        src={project?.sourceImage}
+                                        alt="before"
+                                        className="compare-img"
+                                        />
+                                    }
+                                    itemTwo= {
+                                        <ReactCompareSliderImage 
+                                        src={currentImage || project?.renderedImage}
+                                        alt="after"
+                                        className="compare-img"
+                                        />
+                                    }
+                                    />
+                                ):(
+                                    <div className="compare-fallback">
+                                            {project?.sourceImage && (
+                                                <img src={project.sourceImage} alt="before" className="compare-img"/>
+                                            )}
+                                    </div>
+                                )}
+                            </div>
+
+                        </div>
+
             </section>
 
             {/* {initialImage && (
