@@ -36,7 +36,7 @@ const Navbar = () => {
                         <Box className="logo" />
 
                         <span className="name">
-                            Roomify
+                            Structify
                         </span>
 
                     </div>

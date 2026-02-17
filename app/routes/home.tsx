@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowUpRight, Clock, Layers } from "lucide-react";
 import type { Route } from "./+types/home";
 import Navbar from "components/Navbar";
+import Footer from "components/Footer";
 import Button from "components/ui/Button";
 import Upload from "components/Upload";
 import { useNavigate } from "react-router";
@@ -84,14 +85,14 @@ export default function Home() {
             <div className="pulse"></div>
           </div>
 
-          <p>Introducing Roomify 2.0</p>
+          <p>Introducing Structify 2.0</p>
 
         </div>
 
         <h1>Build beautiful spaces at the speed of thought with Roomify</h1>
 
         <p className="subtitle">
-          ROOMIFY IS AN AI-FIRST DESIGN ENVIRONMENT THAT HELPS YOU VISUALIZE,
+          STRUCTIFY IS AN AI-FIRST DESIGN ENVIRONMENT THAT HELPS YOU VISUALIZE,
           RENDER, AND SHIP ARCHITECTURAL PROJECTS FASTER THAN EVER.
         </p>
 
@@ -183,6 +184,8 @@ export default function Home() {
 
         </div>
       </section>
+
+      <Footer/>
 
     </div>
   )
